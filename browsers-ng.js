@@ -8,9 +8,9 @@ module.exports = function(packageName, argv) {
   if (process.env.SC_TUNNEL_IDENTIFIER) {
     browsers = {
       // Reminder: the first item in this object is used by pipeline builds
-      sl_chrome_latest_osx13: {
+      sl_chrome_latest_osx14: {
         base: 'SauceLabs',
-        platform: 'OS X 10.13',
+        platform: 'macOS 10.14',
         browserName: 'chrome',
         version: 'latest',
         extendedDebugging: true
@@ -22,9 +22,9 @@ module.exports = function(packageName, argv) {
         version: 'latest',
         extendedDebugging: true
       },
-      sl_firefox_latest_osx13: {
+      sl_firefox_latest_osx14: {
         base: 'SauceLabs',
-        platform: 'OS X 10.13',
+        platform: 'macOS 10.14',
         browserName: 'firefox',
         version: 'latest',
         extendedDebugging: true
@@ -55,9 +55,9 @@ module.exports = function(packageName, argv) {
         browserName: 'internet explorer',
         version: '11'
       },
-      sl_safari_latest_osx13: {
+      sl_safari_latest_osx14: {
         base: 'SauceLabs',
-        platform: 'macOS 10.13',
+        platform: 'macOS 10.14',
         browserName: 'safari',
         version: 'latest'
       }
@@ -86,7 +86,9 @@ module.exports = function(packageName, argv) {
   }
   else {
     browsers = {
-      Chrome: {}
+      // Chrome: {}
+      ChromeHeadless: {},
+      FirefoxHeadless: {}
     };
   }
 

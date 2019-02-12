@@ -67,14 +67,14 @@ function makeConfig(packageName, argv) {
     // Restart the browser if it stops sending output for a minutes. This goes
     // hand-in-hand with the high disconnect tolerance to deal with Firefox
     // hanging on the plugin-phone suite.
-    browserNoActivityTimeout: 1 * 60 * 1000,
+    browserNoActivityTimeout: 3 * 60 * 1000,
 
     // Inspired by Angular's karma config as recommended by Sauce Labs
     captureTimeout: 0,
 
     colors: !(argv && argv.xunit),
 
-    concurrency: 2,
+    concurrency: 4,
 
     customLaunchers: launchers,
 
@@ -82,7 +82,8 @@ function makeConfig(packageName, argv) {
 
     frameworks: [
       'browserify',
-      'mocha'
+      'mocha',
+      'chai'
     ],
 
     hostname: 'localhost',

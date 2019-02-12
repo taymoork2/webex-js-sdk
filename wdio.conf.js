@@ -4,10 +4,12 @@
 require('babel-register');
 
 const path = require('path');
-const os = require('os');
+// const os = require('os');
 
 const dotenv = require('dotenv');
 const glob = require('glob');
+const Webpack = require('webpack');
+const WebpackDevServer = require('webpack-dev-server');
 
 dotenv.config();
 dotenv.config({path: '.env.defaults'});
@@ -31,6 +33,10 @@ const PORT = process.env.PORT || 8000;
 const CI = !!(process.env.JENKINS || process.env.CI);
 
 exports.config = {
+  //
+  // WebdriverIO allows it to run your tests in arbitrary locations (e.g. locally or on a remote machine).
+  runner: 'local',
+  //
   //
   // ==================
   // Specify Test Files
@@ -77,21 +83,25 @@ exports.config = {
   //
   capabilities: {
     browserSpock: {
-      desiredCapabilities: {
+      capabilities: {
         browserName: 'firefox',
-        tunnelIdentifier: process.env.SC_TUNNEL_IDENTIFIER
+        'moz:firefoxOptions': {
+          args: [
+            '-start-debugger-server',
+            '9222'
+          ]
+        }
       }
     },
     browserMccoy: {
-      desiredCapabilities: {
+      capabilities: {
         browserName: 'chrome',
-        chromeOptions: {
+        'goog:chromeOptions': {
           args: [
             '--use-fake-device-for-media-stream',
             '--use-fake-ui-for-media-stream'
           ]
-        },
-        tunnelIdentifier: process.env.SC_TUNNEL_IDENTIFIER
+        }
       }
     }
   },
@@ -108,6 +118,8 @@ exports.config = {
   //
   // Level of logging verbosity: silent | verbose | command | data | result | error
   logLevel: 'error',
+  // Warns when a deprecated command is used
+  deprecationWarnings: true,
   //
   // Enables colors for log output.
   coloredLogs: true,
@@ -121,7 +133,7 @@ exports.config = {
   //
   // Set a base URL in order to shorten url command calls. If your url parameter starts
   // with "/", then the base url gets prepended.
-  baseUrl: `http://localhost:${PORT}/`,
+  baseUrl: `http://localhost:${PORT}`,
   //
   // Default timeout for all waitFor* commands.
   waitforTimeout: 15000,
@@ -160,29 +172,22 @@ exports.config = {
   // commands. Instead, they hook themselves up into the test process.
   services: CI ? [
     'sauce',
-    'static-server',
-    'webpack'
+    // 'static-server',
+    // 'webpack',
+    'devtools'
   ] : [
     'selenium-standalone',
-    'firefox-profile',
-    'static-server',
-    'webpack'
+    // 'static-server',
+    // 'webpack',
+    'devtools'
   ],
-  staticServerFolders: [
-    {mount: '/', path: './packages/node_modules/samples'},
-    {mount: '/', path: '.'}
-  ],
-  staticServerPort: PORT,
-  webpackConfig,
-  firefoxProfile: {
-    'media.navigator.permission.disabled': true,
-    'media.peerconnection.video.h264_enabled': true,
-    'media.navigator.streams.fake': true,
-    'media.getusermedia.screensharing.enabled': true,
-    'media.getusermedia.screensharing.allowed_domains': 'localhost, 127.0.0.1',
-    'dom.webnotifications.enabled': false,
-    'media.gmp-manager.updateEnabled': true
-  },
+  // staticServerFolders: [
+  //   {mount: '/', path: './packages/node_modules/samples'},
+  //   {mount: '/', path: '.'}
+  // ],
+  // staticServerPort: PORT,
+  // webpackConfig,
+
   //
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
@@ -223,13 +228,20 @@ exports.config = {
    * @param {Array.<Object>} capabilities list of capabilities details
    * @returns {Promise}
    */
-  onPrepare(config, capabilities) {
+  async onPrepare(config, capabilities) {
     const defs = [
-      capabilities.browserSpock.desiredCapabilities,
-      capabilities.browserMccoy.desiredCapabilities
+      capabilities.browserSpock.capabilities,
+      capabilities.browserMccoy.capabilities
     ];
-
     const build = process.env.BUILD_NUMBER || `local-${process.env.USER}-wdio-${Date.now()}`;
+    const compiledWebpackConfig = Webpack(webpackConfig);
+    const devServerOptions = Object.assign({}, webpackConfig.devServer, {
+      stats: {
+        colors: true
+      }
+    });
+    const devServer = new WebpackDevServer(compiledWebpackConfig, devServerOptions);
+
     defs.forEach((d) => {
       if (CI) {
         d.build = build;
@@ -237,22 +249,36 @@ exports.config = {
         d.base = 'SauceLabs';
 
         d.version = d.version || 'latest';
-        d.platform = d.platform || 'OS X 10.12';
+        d.platform = d.platform || 'macOS 10.14';
       }
       else {
         // Copy the base over so that inject() does its thing.
         d.base = d.browserName;
-        d.platform = os.platform();
+        // d.platform = os.platform();
       }
     });
 
+    return new Promise((resolve, reject) => {
+      devServer.listen(PORT, '127.0.0.1', async (err, stats) => {
+        if (err) reject(err);
+
+        console.log(await stats);
+
+        resolve();
+      });
+    }).then(
+      CI
+        ? inject(defs)
+        : defs.forEach((d) => Reflect.deleteProperty(d, 'base'))
+    );
+
     // The openh264 profile seems to break tests locally; run the tests twice
     // and the plugin should download automatically.
-    return CI ? inject(defs) : Promise.resolve()
-      .then(() => {
-        // Remove the base because it's not actually a selenium property
-        defs.forEach((d) => Reflect.deleteProperty(d, 'base'));
-      });
+    // return CI ? inject(defs) : Promise.resolve()
+    //   .then(() => {
+    //     // Remove the base because it's not actually a selenium property
+    //     defs.forEach((d) => Reflect.deleteProperty(d, 'base'));
+    //   });
   },
   /**
    * Gets executed just before initialising the webdriver session and test framework. It allows you
@@ -325,7 +351,8 @@ exports.config = {
         Object.keys(logTypes).forEach((browserId) => {
           console.log(logTypes[browserId].value);
           if (logTypes[browserId].value.includes('browser')) {
-            const logs = browser.select(browserId).log('browser');
+            const logs = browser[browserId].log('browser');
+            // const logs = browser.(browserId).log('browser');
             if (logs.value.length) {
               console.error(`Test ${test.fullTitle} failed with the following log output from browser ${browserId}`);
               console.error(logs
@@ -385,10 +412,13 @@ if (CI) {
   // tunnel setup. use `npm run sauce:start` and `npm run sauce:run` to start
   // the tunnel and run tests
 
-  exports.config.capabilities.browserSpock.seleniumVersion = '3.4.0';
-  exports.config.capabilities.browserSpock.extendedDebugging = true;
-  exports.config.capabilities.browserMccoy.seleniumVersion = '3.4.0';
-  exports.config.capabilities.browserMccoy.extendedDebugging = true;
+  // exports.config.capabilities.browserSpock.seleniumVersion = '3.4.0';
+  exports.config.capabilities.browserSpock.capabilities.extendedDebugging = true;
+  exports.config.capabilities.browserSpock.capabilities.tunnelIdentifier = process.env.SC_TUNNEL_IDENTIFIER;
+
+  // exports.config.capabilities.browserMccoy.seleniumVersion = '3.4.0';
+  exports.config.capabilities.browserMccoy.capabilities.extendedDebugging = true;
+  exports.config.capabilities.browserMccoy.capabilities.tunnelIdentifier = process.env.SC_TUNNEL_IDENTIFIER;
 
   exports.config = Object.assign(exports.config, {
     user: process.env.SAUCE_USERNAME,
