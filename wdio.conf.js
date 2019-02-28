@@ -13,7 +13,12 @@ dotenv.config();
 dotenv.config({path: '.env.defaults'});
 
 const {inject} = require('./tooling/lib/openh264');
-const webpackConfig = require('./webpack.config')((process.env.JENKINS || process.env.CI) ? 'production' : '');
+const webpackConfig = require('./webpack.config')(
+  process.env.JENKINS || process.env.CI
+    ? 'production'
+    : process.env.NODE_ENV || ''
+);
+
 
 require('babel-register')({
   only: [
