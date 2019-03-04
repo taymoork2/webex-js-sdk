@@ -4,23 +4,21 @@
 require('babel-register');
 
 const path = require('path');
-// const os = require('os');
+const os = require('os');
 
 const dotenv = require('dotenv');
 const glob = require('glob');
-const Webpack = require('webpack');
-const WebpackDevServer = require('webpack-dev-server');
 
 dotenv.config();
 dotenv.config({path: '.env.defaults'});
 
 const {inject} = require('./tooling/lib/openh264');
+const WebpackService = require('./wdio.helpers.d/webpack-service.js').default;
 const webpackConfig = require('./webpack.config')(
   process.env.JENKINS || process.env.CI
     ? 'production'
     : process.env.NODE_ENV || ''
 );
-
 
 require('babel-register')({
   only: [
@@ -36,7 +34,6 @@ exports.config = {
   //
   // WebdriverIO allows it to run your tests in arbitrary locations (e.g. locally or on a remote machine).
   runner: 'local',
-  //
   //
   // ==================
   // Specify Test Files
@@ -89,7 +86,18 @@ exports.config = {
           args: [
             '-start-debugger-server',
             '9222'
-          ]
+          ],
+          ...(!CI && {
+            prefs: {
+              'media.navigator.permission.disabled': true,
+              'media.peerconnection.video.h264_enabled': true,
+              'media.navigator.streams.fake': true,
+              'media.getusermedia.screensharing.enabled': true,
+              'media.getusermedia.screensharing.allowed_domains': 'localhost, 127.0.0.1',
+              'dom.webnotifications.enabled': false,
+              'media.gmp-manager.updateEnabled': true
+            }
+          })
         }
       }
     },
@@ -116,8 +124,8 @@ exports.config = {
   // e.g. using promises you can set the sync option to false.
   sync: true,
   //
-  // Level of logging verbosity: silent | verbose | command | data | result | error
-  logLevel: 'error',
+  // Level of logging verbosity: trace | debug | info | warn | error | silent
+  logLevel: 'silent',
   // Warns when a deprecated command is used
   deprecationWarnings: true,
   //
@@ -133,7 +141,7 @@ exports.config = {
   //
   // Set a base URL in order to shorten url command calls. If your url parameter starts
   // with "/", then the base url gets prepended.
-  baseUrl: `http://localhost:${PORT}`,
+  baseUrl: `http://localhost:${PORT}/`,
   //
   // Default timeout for all waitFor* commands.
   waitforTimeout: 15000,
@@ -172,22 +180,19 @@ exports.config = {
   // commands. Instead, they hook themselves up into the test process.
   services: CI ? [
     'sauce',
-    // 'static-server',
-    // 'webpack',
-    'devtools'
+    'devtools',
+    [WebpackService]
   ] : [
     'selenium-standalone',
-    // 'static-server',
-    // 'webpack',
-    'devtools'
+    'devtools',
+    [WebpackService]
   ],
-  // staticServerFolders: [
-  //   {mount: '/', path: './packages/node_modules/samples'},
-  //   {mount: '/', path: '.'}
-  // ],
-  // staticServerPort: PORT,
-  // webpackConfig,
-
+  staticServerFolders: [
+    {mount: '/', path: './packages/node_modules/samples'},
+    {mount: '/', path: '.'}
+  ],
+  staticServerPort: PORT,
+  webpackConfig,
   //
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
@@ -200,7 +205,7 @@ exports.config = {
   // Test reporter for stdout.
   // The only one supported by default is 'dot'
   // see also: http://webdriver.io/guide/testrunner/reporters.html
-  reporters: CI ? ['spec', 'junit'] : ['spec'],
+  reporters: CI ? ['dot', 'spec', 'junit'] : ['dot', 'spec'],
   reporterOptions: {
     junit: {
       outputDir: './reports/junit/wdio'
@@ -211,8 +216,8 @@ exports.config = {
   // See the full list at http://mochajs.org/
   mochaOpts: {
     // reminder: mocha-steps seems to make tests flaky on Sauce Labs
-    timeout: 80000,
-    ui: 'bdd'
+    ui: 'bdd',
+    timeout: 80000
   },
   //
   // =====
@@ -228,19 +233,12 @@ exports.config = {
    * @param {Array.<Object>} capabilities list of capabilities details
    * @returns {Promise}
    */
-  async onPrepare(config, capabilities) {
+  onPrepare(config, capabilities) {
+    const build = process.env.BUILD_NUMBER || `local-${process.env.USER}-wdio-${Date.now()}`;
     const defs = [
       capabilities.browserSpock.capabilities,
       capabilities.browserMccoy.capabilities
     ];
-    const build = process.env.BUILD_NUMBER || `local-${process.env.USER}-wdio-${Date.now()}`;
-    const compiledWebpackConfig = Webpack(webpackConfig);
-    const devServerOptions = Object.assign({}, webpackConfig.devServer, {
-      stats: {
-        colors: true
-      }
-    });
-    const devServer = new WebpackDevServer(compiledWebpackConfig, devServerOptions);
 
     defs.forEach((d) => {
       if (CI) {
@@ -249,36 +247,33 @@ exports.config = {
         d.base = 'SauceLabs';
 
         d.version = d.version || 'latest';
-        d.platform = d.platform || 'macOS 10.14';
+        d.platform = d.platform || 'macOS 10.13';
       }
       else {
         // Copy the base over so that inject() does its thing.
         d.base = d.browserName;
-        // d.platform = os.platform();
+        d.platformName = () => {
+          switch (os.type()) {
+            case 'Darwin':
+              return 'mac';
+            case 'Window_NT':
+              return 'windows';
+            case 'Linux':
+              return 'Linux';
+            default:
+              return os.type();
+          }
+        };
       }
     });
 
-    return new Promise((resolve, reject) => {
-      devServer.listen(PORT, '127.0.0.1', async (err, stats) => {
-        if (err) reject(err);
-
-        console.log(await stats);
-
-        resolve();
-      });
-    }).then(
-      CI
-        ? inject(defs)
-        : defs.forEach((d) => Reflect.deleteProperty(d, 'base'))
-    );
-
     // The openh264 profile seems to break tests locally; run the tests twice
     // and the plugin should download automatically.
-    // return CI ? inject(defs) : Promise.resolve()
-    //   .then(() => {
-    //     // Remove the base because it's not actually a selenium property
-    //     defs.forEach((d) => Reflect.deleteProperty(d, 'base'));
-    //   });
+    return CI ? inject(defs) : Promise.resolve()
+      .then(() => {
+        // Remove the base because it's not actually a selenium property
+        defs.forEach((d) => Reflect.deleteProperty(d, 'base'));
+      });
   },
   /**
    * Gets executed just before initialising the webdriver session and test framework. It allows you
@@ -352,7 +347,6 @@ exports.config = {
           console.log(logTypes[browserId].value);
           if (logTypes[browserId].value.includes('browser')) {
             const logs = browser[browserId].log('browser');
-            // const logs = browser.(browserId).log('browser');
             if (logs.value.length) {
               console.error(`Test ${test.fullTitle} failed with the following log output from browser ${browserId}`);
               console.error(logs
