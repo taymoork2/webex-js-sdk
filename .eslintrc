@@ -1,0 +1,221 @@
+{
+  "parser": "babel-eslint",
+  "root": true,
+  "extends": [
+    "airbnb-base",
+    "plugin:prettier/recommended"
+  ],
+  "globals": {
+    "PACKAGE_VERSION": false
+  },
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es6": true
+  },
+  "rules": {
+    "prettier/prettier": ["error", {}, {
+      "usePrettierrc": true,
+      "fileInfoOptions": {
+        "withNodeModules": true
+      }
+    }],
+    "no-warning-comments": "warn",
+    "no-multi-assign": "warn",
+    "no-param-reassign": "warn",
+    "no-shadow": "warn",
+    "no-underscore-dangle": "warn",
+    "class-methods-use-this": "warn",
+    "no-restricted-syntax": "warn",
+    "import/no-unresolved": [
+      "error",
+      {
+        "commonjs": true,
+        "caseSensitive": true
+      }
+    ],
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "packageDir": ["./"]
+      }
+    ],
+    "require-jsdoc": [
+      "warn",
+      {
+        "require": {
+          "FunctionDeclaration": true,
+          "MethodDefinition": true,
+          "ClassDeclaration": true,
+          "ArrowFunctionExpression": false,
+          "FunctionExpression": true
+        }
+      }
+    ],
+    "valid-jsdoc": [
+      "error",
+      {
+        "matchDescription": ".+",
+        "prefer": {
+          "arg": "param",
+          "argument": "param",
+          "return": "returns",
+          "virtual": "abstract",
+          "fires": "emits"
+        },
+        "requireParamDescription": false,
+        "requireReturn": false,
+        "requireReturnType": true,
+        "requireReturnDescription": false
+      }
+    ],
+    "prefer-destructuring": [
+      "error",
+      {
+        "VariableDeclarator": {
+          "array": false,
+          "object": true
+        },
+        "AssignmentExpression": {
+          "array": false,
+          "object": false
+        }
+      },
+      {
+        "enforceForRenamedProperties": false
+      }
+    ],
+    "no-use-before-define": [
+      "error",
+      {
+        "classes": false,
+        "functions": false,
+        "variables": true
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["packages/node_modules/**/test/**/*.js", "packages/node_modules/**/*-spec/**/*.js"],
+      "extends": "plugin:mocha/recommended",
+      "plugins": [
+        "mocha"
+      ],
+      "env": {
+        "mocha": true
+      },
+      "rules": {
+        "func-names": 0,
+        "no-invalid-this": 0,
+        "require-jsdoc": 0,
+        "mocha/no-mocha-arrows": "off"
+      }
+    },
+    {
+      "files": ["wdio.helpers.d/**/*.js", "packages/node_modules/**/test/wdio/**/*.js"],
+      "globals": {
+        "browser": false,
+        "$": false,
+        "$$": false,
+        "step": false
+      }
+    },
+    {
+      "files": ["packages/node_modules/@webex/xunit-with-logs"],
+      "rules": {
+        "func-names": 0,
+        "no-console": 0
+      }
+    },
+    {
+      "files": ["packages/node_modules/**/bin-*/**"],
+      "rules": {
+        "no-sync": 0
+      }
+    }
+  ],
+  "settings": {
+    "import/resolver": {
+      "eslint-import-resolver-custom-alias": {
+        "packages": [
+          "packages/node_modules/@webex/*",
+          "packages/node_modules/webex"
+        ],
+        "alias": {
+          "@webex/": "./",
+          "webex": "./"
+        }
+        // "alias": {
+        //   "@webex/bin-sauce-connect": "./packages/node_modules/@webex/bin-sauce-connect",
+        //   "@webex/common": "./packages/node_modules/@webex/common",
+        //   "@webex/common-evented": "./packages/node_modules/@webex/common-evented",
+        //   "@webex/common-timers": "./packages/node_modules/@webex/common-timers",
+        //   "@webex/helper-html": "./packages/node_modules/@webex/helper-html",
+        //   "@webex/helper-image": "./packages/node_modules/@webex/helper-image",
+        //   "@webex/http-core": "./packages/node_modules/@webex/http-core",
+        //   "@webex/internal-plugin-avatar": "./packages/node_modules/@webex/internal-plugin-avatar",
+        //   "@webex/internal-plugin-board": "./packages/node_modules/@webex/internal-plugin-board",
+        //   "@webex/internal-plugin-calendar": "./packages/node_modules/@webex/internal-internal-plugin-calendar",
+        //   "@webex/internal-plugin-conversation": "./packages/node_modules/@webex/internal-internal-plugin-conversation",
+        //   "@webex/internal-plugin-devices": "./packages/node_modules/@webex/internal-internal-plugin-devices",
+        //   "@webex/internal-plugin-ediscovery": "./packages/node_modules/@webex/internal-internal-plugin-ediscovery",
+        //   "@webex/internal-plugin-envryption": "./packages/node_modules/@webex/internal-internal-plugin-encryption",
+        //   "@webex/internal-plugin-feature": "./packages/node_modules/@webex/internal-internal-plugin-feature",
+        //   "@webex/internal-plugin-flag": "./packages/node_modules/@webex/internal-plugin-flag",
+        //   "@webex/internal-plugin-locus": "./packages/node_modules/@webex/internal-plugin-locus",
+        //   "@webex/internal-plugin-lyra": "./packages/node_modules/@webex/internal-plugin-lyra",
+        //   "@webex/internal-plugin-mercury": "./packages/node_modules/@webex/internal-internal-plugin-mercury",
+        //   "@webex/internal-plugin-metrics": "./packages/node_modules/@webex/internal-internal-plugin-metrics",
+        //   "@webex/internal-plugin-presence": "./packages/node_modules/@webex/internal-internal-plugin-presence",
+        //   "@webex/internal-plugin-search": "./packages/node_modules/@webex/internal-internal-plugin-search",
+        //   "@webex/internal-plugin-support": "./packages/node_modules/@webex/internal-internal-plugin-support",
+        //   "@webex/internal-plugin-team": "./packages/node_modules/@webex/internal-plugin-team",
+        //   "@webex/internal-plugin-user": "./packages/node_modules/@webex/internal-plugin-user",
+        //   "@webex/internal-plugin-wdm": "./packages/node_modules/@webex/internal-plugin-wdm",
+        //   "@webex/jsdoctrinetest": "./packages/node_modules/@webex/jsdoctrinetest",
+        //   "@webex/media-engine-webrtc": "./packages/node_modules/@webex/media-engine-webrtc",
+        //   "@webex/plugin-attachment-actions": "./packages/node_modules/@webex/plugin-attachment-actions",
+        //   "@webex/plugin-authorization": "./packages/node_modules/@webex/plugin-authorization",
+        //   "@webex/plugin-authorization-browser": "./packages/node_modules/@webex/plugin-authorization-browser",
+        //   "@webex/plugin-authorization-browser-first-party": "./packages/node_modules/@webex/plugin-authorization-browser-first-party",
+        //   "@webex/plugin-authorization-node": "./packages/node_modules/@webex/plugin-authorization-node",
+        //   "@webex/plugin-device-manager": "./packages/node_modules/@webex/plugin-device-manager",
+        //   "@webex/plugin-logger": "./packages/node_modules/@webex/plugin-logger",
+        //   "@webex/plugin-meetings": "./packages/node_modules/@webex/plugin-meetings",
+        //   "@webex/plugin-memberships": "./packages/node_modules/@webex/plugin-memberships",
+        //   "@webex/plugin-messages": "./packages/node_modules/@webex/plugin-messages",
+        //   "@webex/plugin-people": "./packages/node_modules/@webex/plugin-people",
+        //   "@webex/plugin-phone": "./packages/node_modules/@webex/plugin-phone",
+        //   "@webex/plugin-rooms": "./packages/node_modules/@webex/plugin-rooms",
+        //   "@webex/plugin-team-memberships": "./packages/node_modules/@webex/plugin-team-memberships",
+        //   "@webex/plugin-teams": "./packages/node_modules/@webex/plugin-teams",
+        //   "@webex/plugin-webhooks": "./packages/node_modules/@webex/plugin-webhooks",
+        //   "@webex/recipe-private-web-client": "./packages/node_modules/@webex/recipe-private-web-client",
+        //   "@webex/storage-adapter-local-forage": "./packages/node_modules/@webex/storage-adapter-local-forage",
+        //   "@webex/storage-adapter-local-storage": "./packages/node_modules/@webex/storage-adapter-local-storage",
+        //   "@webex/storage-adapter-session-storage": "./packages/node_modules/@webex/storage-adapter-session-storage",
+        //   "@webex/storage-adapter-spec": "./packages/node_modules/@webex/storage-adapter-spec",
+        //   "@webex/test-helper-appid": "./packages/node_modules/@webex/test-helper-appid",
+        //   "@webex/test-helper-automation": "./packages/node_modules/@webex/test-helper-automation",
+        //   "@webex/test-helper-chai": "./packages/node_modules/@webex/test-helper-chai",
+        //   "@webex/test-helper-file": "./packages/node_modules/@webex/test-helper-file",
+        //   "@webex/test-helper-make-local-url": "./packages/node_modules/@webex/test-helper-make-local-url",
+        //   "@webex/test-helper-mocha": "./packages/node_modules/@webex/test-helper-mocha",
+        //   "@webex/test-helper-mock-web-socket": "./packages/node_modules/@webex/test-helper-mock-web-socket",
+        //   "@webex/test-helper-mock-webex": "./packages/node_modules/@webex/test-helper-mock-webex",
+        //   "@webex/test-helper-refresh-callback": "./packages/node_modules/@webex/test-helper-refresh-callback",
+        //   "@webex/test-helper-retry": "./packages/node_modules/@webex/test-helper-retry",
+        //   "@webex/test-helper-server": "./packages/node_modules/@webex/test-helper-server",
+        //   "@webex/test-helper-sinon": "./packages/node_modules/@webex/test-helper-sinon",
+        //   "@webex/test-helper-test-users": "./packages/node_modules/@webex/test-helper-test-users",
+        //   "@webex/test-users": "./packages/node_modules/@webex/test-users",
+        //   "@webex/webex-core": "./packages/node_modules/@webex/webex-core",
+        //   "@webex/webex-server": "./packages/node_modules/@webex/webex-server",
+        //   "@webex/webrtc": "./packages/node_modules/@webex/webrtc",
+        //   "@webex/xunit-with-logs": "./packages/node_modules/@webex/xunit-with-logs",
+        //   "webex": "./packages/node_modules/webex"
+        // }
+      }
+    }
+  }
+}
